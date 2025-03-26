@@ -13,3 +13,5 @@ Imports:
     dplyr,
     tidyr,
     writexl
+URL: https://github.com/n-albudoor/childeswordfreq
+BugReports: https://github.com/n-albudoor/childeswordfreq/issues
