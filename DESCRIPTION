@@ -1,0 +1,15 @@
+Package: childeswordfreq
+Title: Word Frequency Extraction and Summarization
+Version: 0.1.0
+Authors@R: 
+    person("Nahar", "Albudoor", email = "n.albudoor@gmail.com", role = c("aut", "cre"))
+Description: Extracts word counts by speaker role from CHILDES datasets.
+License: MIT
+Encoding: UTF-8
+RoxygenNote: 7.3.2
+Imports: 
+    childesr,
+    readr,
+    dplyr,
+    tidyr,
+    writexl
