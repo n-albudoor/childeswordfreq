@@ -1,0 +1,47 @@
+---
+title: "childeswordfreq: Getting started"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{childeswordfreq: Getting started}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(childeswordfreq)
+```
+
+# Quick start
+
+This shows a basic example of how to run the function.
+
+word_file <- system.file("extdata", "word_list.csv", package = "childeswordfreq")
+out_file  <- tempfile(fileext = ".xlsx")
+
+word_counts(
+  word_list_file = word_file,
+  output_file    = out_file,
+  language       = "eng",
+  age            = c(18, 36)
+)
+
+# Wildcards and POS
+
+This example shows extra options you can use.
+
+words <- tempfile(fileext = ".csv")
+write.csv(data.frame(word = c("go", "run%", "play_", "the")), words, row.names = FALSE)
+
+out_file <- tempfile(fileext = ".xlsx")
+word_counts(
+  word_list_file  = words,
+  output_file     = out_file,
+  language        = "eng",
+  age             = c(18, 36),
+  wildcard        = TRUE,
+  collapse        = "stem",
+  part_of_speech  = c("v"),
+  include_context = TRUE,
+  window          = c(1, 1)
+)
