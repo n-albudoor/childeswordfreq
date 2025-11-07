@@ -35,3 +35,17 @@ Writes an Excel file with 2 sheets: word frequencies and summary.
 \description{
 Reads a word list CSV and outputs a word frequency Excel file with summary.
 }
+\examples{
+\donttest{
+word_file <- system.file("extdata", "word_list.csv", package = "childeswordfreq")
+output_file <- tempfile(fileext = ".xlsx")
+word_counts(
+  word_list_file = word_file,
+  output_file = output_file,
+  collection = NULL,
+  language = "eng",
+  age = c(18, 36),
+  sex = NULL
+)
+}
+}

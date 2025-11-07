@@ -1,0 +1,32 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# childeswordfreq
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+The `childeswordfreq` package provides tools to extract word frequencies and speaker role breakdowns from the CHILDES database, along with dataset-level summaries.
+
+## Installation
+
+```r
+# CRAN
+install.packages("childeswordfreq")
+
+# Or install the development version from GitHub
+remotes::install_github("n-albudoor/childeswordfreq")
+```
+

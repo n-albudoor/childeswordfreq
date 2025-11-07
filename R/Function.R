@@ -1,4 +1,15 @@
-# In R/get_word_counts_by_role.R
+utils::globalVariables(c(
+  "gloss", "speaker_role", "count", "word", "sd", "male_count", "female_count", "everything"
+))
+
+utils::globalVariables(c(
+  "target_child_id",
+  "target_child_sex",
+  "n_target_child_reported_male",
+  "n_target_child_reported_female"
+))
+
+# In R/word_counts.R
 
 #' Get Word Counts by Speaker Role
 #'
@@ -19,9 +30,22 @@
 #' @importFrom readr read_csv
 #' @importFrom writexl write_xlsx
 #' @importFrom rlang sym
-
+#' @importFrom stats sd
 #'
 #' @return Writes an Excel file with 2 sheets: word frequencies and summary.
+#' @examples
+#' \donttest{
+#' word_file <- system.file("extdata", "word_list.csv", package = "childeswordfreq")
+#' output_file <- tempfile(fileext = ".xlsx")
+#' word_counts(
+#'   word_list_file = word_file,
+#'   output_file = output_file,
+#'   collection = NULL,
+#'   language = "eng",
+#'   age = c(18, 36),
+#'   sex = NULL
+#' )
+#' }
 #' @export
 word_counts <- function(
     word_list_file,
@@ -77,6 +101,10 @@ word_counts <- function(
       mutate(Total = sum(c_across(where(is.numeric)))) %>%
       ungroup()
 
+    unique_children <- full_data %>%
+      dplyr::filter(!is.na(target_child_id), !is.na(target_child_sex)) %>%
+      dplyr::distinct(target_child_id, target_child_sex)
+
     # Step 5: Dataset summary from full (unfiltered) data
     summary_data <- tibble(
       included_collections = paste(unique(full_data$collection_name), collapse = ", "),
@@ -93,12 +121,12 @@ word_counts <- function(
       target_child_age_max = round(max(full_data$target_child_age, na.rm = TRUE),2),
       target_child_age_mean = round(mean(full_data$target_child_age, na.rm = TRUE),2),
       target_child_age_sd = round(sd(full_data$target_child_age, na.rm = TRUE),2),
-      male_count = sum(full_data$target_child_sex == "male", na.rm = TRUE),
-      female_count = sum(full_data$target_child_sex == "female", na.rm = TRUE)
+      n_target_child_reported_male = sum(unique_children$target_child_sex == "male"),
+      n_target_child_reported_female = sum(unique_children$target_child_sex == "female")
     ) %>%
       mutate(
-        male_percent = round(100 * male_count / (male_count + female_count), 1),
-        female_percent = round(100 * female_count / (male_count + female_count), 1)
+        percent_target_child_reported_male = round(100 * n_target_child_reported_male / (n_target_child_reported_male + n_target_child_reported_female), 1),
+        percent_target_child_reported_female = round(100 * n_target_child_reported_female / (n_target_child_reported_male + n_target_child_reported_female), 1)
       ) %>%
       mutate(across(everything(), as.character)) %>%
       pivot_longer(cols = everything(), names_to = "Variable", values_to = "Value")
@@ -112,5 +140,5 @@ word_counts <- function(
       path = output_file
     )
 
-    message("✅ Excel file with two sheets saved to: ", output_file)
+    message("Excel file with two sheets saved to: ", output_file)
 }
