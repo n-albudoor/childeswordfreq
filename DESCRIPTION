@@ -1,6 +1,6 @@
 Package: childeswordfreq
 Title: Word Frequency Extraction and Summarization
-Version: 0.1.0
+Version: 0.2.0
 Authors@R: 
     person("Nahar", "Albudoor", email = "n.albudoor@gmail.com", role = c("aut", "cre"))
 Description: Provides tools to extract word frequencies from the CHILDES
@@ -13,7 +13,7 @@ Description: Provides tools to extract word frequencies from the CHILDES
     database is maintained at <https://childes.talkbank.org/>.
 License: MIT + file LICENSE
 Encoding: UTF-8
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Imports: 
     childesr,
     readr,
@@ -22,7 +22,10 @@ Imports:
     writexl,
     rlang,
     magrittr,
-    stats
+    stats,
+    digest,
+    jsonlite,
+    tibble
 URL: https://github.com/n-albudoor/childeswordfreq
 BugReports: https://github.com/n-albudoor/childeswordfreq/issues
 Suggests: 
