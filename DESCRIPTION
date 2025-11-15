@@ -15,7 +15,7 @@ Description:
     normalization per number of tokens or utterances, speaker-role 
     breakdowns, dataset summaries, and export to Excel workbooks for 
     reproducible child language research. 
-    The CHILDES database is maintained at https://childes.talkbank.org/. 
+    The CHILDES database is maintained at <https://talkbank.org/childes/>.
 License: MIT + file LICENSE
 URL: https://github.com/n-albudoor/childeswordfreq
 BugReports: https://github.com/n-albudoor/childeswordfreq/issues
