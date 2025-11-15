@@ -2,11 +2,12 @@
 % Please edit documentation in R/word_counts.R
 \name{word_counts}
 \alias{word_counts}
-\title{Get Word Counts by Speaker Role}
+\title{Get word counts by speaker role}
 \usage{
 word_counts(
-  word_list_file,
+  word_list_file = NULL,
   output_file,
+  words = NULL,
   collection = NULL,
   language = NULL,
   corpus = NULL,
@@ -14,51 +15,121 @@ word_counts(
   sex = NULL,
   role = NULL,
   role_exclude = NULL,
-  collapse = c("none", "stem"),
   wildcard = FALSE,
-  merge_matches = TRUE,
+  collapse = c("none", "stem"),
   part_of_speech = NULL,
-  include_context = FALSE,
-  window = c(0, 0),
-  db_version = "current"
+  tier = c("main", "mor"),
+  normalize = FALSE,
+  per = 1000L,
+  zipf = FALSE,
+  include_patterns = NULL,
+  exclude_patterns = NULL,
+  sort_by = c("word", "frequency"),
+  min_count = 0L,
+  freq_ignore_special = TRUE,
+  db_version = "current",
+  cache = FALSE,
+  cache_dir = NULL,
+  ...
 )
 }
 \arguments{
-\item{word_list_file}{Path to CSV file with a "word" column.}
+\item{word_list_file}{Optional path to a CSV file with a column named \code{word}.
+If NULL and \code{words} is also NULL, all types in the slice are counted.}
 
-\item{output_file}{Path to output Excel (.xlsx) file.}
+\item{output_file}{Path to the output \code{.xlsx} file.}
 
-\item{collection}{Language collection (default = NULL).}
+\item{words}{Optional character vector of target words/patterns. Ignored if
+\code{word_list_file} is provided. If both are NULL, all types are counted.}
 
-\item{language}{Vector of languages.}
+\item{collection}{Optional CHILDES filter.}
 
-\item{corpus}{Vector of corpora.}
+\item{language}{Optional CHILDES filter.}
 
-\item{age}{Numeric vector: single value or min/max.}
+\item{corpus}{Optional CHILDES filter.}
 
-\item{sex}{"male" and/or "female".}
+\item{age}{Optional numeric: single value or c(min, max) in months.}
 
-\item{role}{Character vector of roles to include (e.g., "MOT","CHI").}
+\item{sex}{Optional: "male" and/or "female".}
 
-\item{role_exclude}{Character vector of roles to exclude.}
+\item{role}{Optional character vector of roles to include.}
 
-\item{collapse}{Collapse counts: "none" or "stem".}
+\item{role_exclude}{Optional character vector of roles to exclude.}
 
-\item{wildcard}{If TRUE, treat '\%' and '_' in the CSV as wildcards.}
+\item{wildcard}{Logical; treat \code{"\%"} as any number of characters and
+\code{"_"} as one character (token mode).}
 
-\item{merge_matches}{If TRUE, merge wildcard hits back to the pattern row.}
+\item{collapse}{Either "none" or "stem". Using "stem" triggers token mode.}
 
-\item{part_of_speech}{POS filter for tokens (e.g., c("n","v")).}
+\item{part_of_speech}{Optional POS filter, e.g., c("n","v") (token mode).}
 
-\item{include_context}{If TRUE, adds a Contexts sheet via get_contexts().}
+\item{tier}{Which tier to count from: "main" or "mor".}
 
-\item{window}{Two-length numeric vector: utterances before/after in contexts.}
+\item{normalize}{Logical; if TRUE, add per-N rate columns.}
 
-\item{db_version}{CHILDES DB version label (e.g., "current").}
+\item{per}{Integer denominator for rates (for example 1000 for per-1k).}
+
+\item{zipf}{Logical; if TRUE, also add Zipf columns (log10 per-billion).}
+
+\item{include_patterns}{Optional character vector of CHILDES-style patterns,
+using \code{"\%"} and \code{"_"} to restrict output to matching words (FREQ-style +s).}
+
+\item{exclude_patterns}{Optional character vector of CHILDES-style patterns
+to drop from the output.}
+
+\item{sort_by}{Final sort order: "word" (alphabetical) or "frequency"
+(descending Total).}
+
+\item{min_count}{Integer; drop rows with Total < min_count (after counting).}
+
+\item{freq_ignore_special}{Logical; if TRUE, drop "xxx", "www", and any word
+starting with 0, &, +, -, or # (FREQ default ignore rules).}
+
+\item{db_version}{CHILDES database version label to record in metadata.}
+
+\item{cache}{Logical; if TRUE, cache CHILDES queries on disk.}
+
+\item{cache_dir}{Optional cache directory when cache = TRUE.}
+
+\item{...}{Reserved for future extensions; currently unused.}
 }
 \value{
-Writes an Excel with Word_Frequencies, Dataset_Summary, Run_Metadata, and optional POS_Summary, Contexts.
+Invisibly returns \code{output_file} after writing the workbook.
 }
 \description{
-Reads a word list CSV and outputs a word frequency Excel file with summary tables.
+Reads a CSV with a \code{word} column or an in-memory character vector and writes
+an Excel file with Word_Frequencies, Dataset_Summary, File_Speaker_Summary,
+and Run_Metadata. If no word list is provided, all types in the selected
+slice are counted (FREQ-style “all words” mode).
+}
+\details{
+Uses exact type counts by default; switches to token mode when wildcards,
+stems, or POS filters are requested. Optional MOR-only tier.
+}
+\examples{
+\dontrun{
+# Minimal example (not run during R CMD check)
+tmp_csv <- tempfile(fileext = ".csv")
+write.csv(data.frame(word = c("the","go")), tmp_csv, row.names = FALSE)
+
+out_file <- tempfile(fileext = ".xlsx")
+word_counts(
+  word_list_file = tmp_csv,
+  output_file    = out_file,
+  language       = "eng",
+  corpus         = "Brown",
+  age            = c(24, 26)
+)
+
+# All-words mode (no word list; counts every type in the slice)
+out_all <- tempfile(fileext = ".xlsx")
+word_counts(
+  word_list_file = NULL,
+  words          = NULL,
+  output_file    = out_all,
+  language       = "eng",
+  corpus         = "Brown",
+  age            = c(24, 26)
+)
+}
 }

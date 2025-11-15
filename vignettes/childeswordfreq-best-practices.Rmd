@@ -1,0 +1,359 @@
+---
+title: "childeswordfreq: Usage & Best Practices"
+author: "Nahar Albudoor"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{childeswordfreq: Usage & Best Practices}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+This document provides a practical overview and methodological recommendations for using `childeswordfreq`. 
+
+## 1. Setup and Basic Requirements
+
+`childeswordfreq` is designed as a thin, reproducible layer on top of `childesr`. **All data access is remote.**
+
+- **R ≥ 4.4.2**
+- **Active internet connection** (no local CHILDES corpora are used)
+- **Dependencies** (installed automatically from CRAN): `childesr`, `dplyr`, `tidyr`, `tibble`, `rlang`, `writexl`, `readr`, `cachem`, `memoise`, `rappdirs`
+
+Caching is off by default; Section 8.2 explains when and why to use it.
+
+**Installation**
+
+```r
+# Install and Load
+install.packages("childeswordfreq")
+library(childeswordfreq)
+```
+
+## 2. Input Format and Parameter Specification
+
+### 2.1 Word lists for `word_counts()`
+
+`word_counts()` accepts either:
+
+- A `.csv` file with a column named `word`, or
+- A character vector via the `words` argument.
+
+If `word_list_file = NULL` and `words = NULL`, `word_counts()` enters **“all-words” mode** and counts **every type** in the selected slice.
+
+```r
+# Prepare a temporary CSV with a `word` column
+tmp_csv <- tempfile(fileext = ".csv")
+write.csv(
+  data.frame(word = c("go", "want", "think")),
+  tmp_csv,
+  row.names = FALSE
+)
+
+# Output path for the Excel workbook
+out <- tempfile(fileext = ".xlsx")
+
+# Run word_counts on a specific CHILDES slice
+word_counts(
+  word_list_file = tmp_csv,
+  output_file = out,
+  language = "eng",
+  corpus = "Brown",
+  age = c(24, 36),
+  role = c("CHI", "MOT")
+)
+```
+
+**Requirements for .csv inputs:**
+
+- A single column `.csv` file.
+- The column header must be exactly `word`.
+- Each row must include one target item or pattern.
+- Case matching is case-insensitive at the **type** level; **token** mode makes use of CHILDES gloss and MOR information.
+
+### 2.2 CHILDES filters
+
+All CHILDES filters (`language`, `corpus`, `collection`, `age`, `sex`, `role`, `role_exclude`) are passed directly to `childesr`. In practice:
+
+- `corpus` and `language` names must match CHILDES conventions exactly.
+- `age` is in months and can be a single value or `c(min, max)`.
+- `role` and `role_exclude` are speaker code(s), for example `"CHI"`, `"MOT"`, `"FAT"`, `"ADU"`.
+- Any parameter left as `NULL` is interpreted as “no restriction” on that dimension.
+
+**Example: all English-language corpora, no restriction on age or role:**
+
+```r
+word_counts(
+  word_list_file = tmp_csv,
+  output_file = out,
+  language = "eng",
+  age = NULL,
+  role = NULL
+)
+```
+
+## 3. Type vs. Token Mode
+
+`word_counts()` has two operational modes:
+
+- **Type mode**: default; **more efficient**; counts exact lexical types using `childesr::get_types()`.
+- **Token mode**: enabled when any of the following are used:
+  - `wildcard = TRUE`
+  - The word list itself contains `%` or `_`
+  - `collapse = "stem"`
+  - `part_of_speech` is non-`NULL`
+  - `tier = "mor"`
+
+Token mode uses `childesr::get_tokens()` and may be substantially **slower**, particularly when used over wide age ranges or many corpora.
+
+**Examples:**
+
+_Type mode (exact forms)_
+
+```r
+word_counts(
+  words = c("go", "went", "going"),
+  output_file = out,
+  language = "eng",
+  corpus = "Brown",
+  age = c(24, 36)
+)
+```
+
+_Token mode with wildcard and stems_
+
+```r
+word_counts(
+  words = c("go%", "run%"),
+  output_file = out,
+  language = "eng",
+  corpus = "Brown",
+  age = c(24, 36),
+  wildcard = TRUE,        # "%" and "_" patterns
+  collapse = "stem",      # aggregate inflected variants
+  part_of_speech = "v",   # verb-only counts where MOR is available
+  tier = "mor"            # MOR-tagged tokens only
+)
+```
+
+
+
+### 3.1 Morphology and Stems
+
+In token mode, `collapse = "stem"` attempts to aggregate inflected variants under a single stem where MOR analysis supports it (for example “go”, “goes”, “going”, “went” under one stem).
+
+**Limitations:**
+
+- Stem assignment depends on the MOR tier and may vary across corpora.
+- Some forms may remain distinct if they are not consistently tagged.
+
+For analyses where inflection is theoretically important, users should inspect the resulting stems and, if necessary, operate on separate forms explicitly.
+
+### 3.2 Part-of-Speech Filtering
+
+The `part_of_speech` argument restricts counts to specific POS values in MOR (for example `c("n","v")`). This is only available in token mode and is useful for:
+
+- Disambiguating homographs across categories.
+- Excluding non-content items for certain analyses.
+
+Users should verify POS behavior on a subset of items before relying on it in a large-scale analysis.
+
+## 4. Normalization and Zipf Scaling
+
+`word_counts()` can attach normalized rates and Zipf-scaled values.
+
+- `normalize = TRUE` adds per-`per` rates for each speaker role and for `Total` (for example **per 1,000 tokens**).
+- `zipf = TRUE` adds Zipf columns (`*_Zipf`), computed as `log10` of the **estimated frequency per billion tokens**.
+
+**Example:**
+
+```r
+word_counts(
+  word_list_file = tmp_csv,
+  output_file = out,
+  language = "eng",
+  corpus = "Brown",
+  age = c(24, 48),
+  role = c("CHI", "MOT"),
+  normalize = TRUE,
+  per = 1000,
+  zipf = TRUE
+)
+```
+
+The `Dataset_Summary` sheet records the total token counts used as denominators, both overall and by speaker role, so that normalized and Zipf values can be interpreted and recomputed if needed.
+
+## 5. FREQ-style Ignore Rules and Pattern Filters
+
+By default, `word_counts()` applies CLAN/FREQ-style ignore rules via `freq_ignore_special = TRUE`:
+
+- drops `xxx`, `www`, and any item beginning with `0`, `&`, `+`, `-`, or `#`
+
+These rules are applied both to the internal data and to the final frequency table. Set `freq_ignore_special = FALSE` to retain these items.
+
+The arguments `include_patterns` and `exclude_patterns` provide an additional CHILDES-style filter layer on lexical items:
+
+```r
+word_counts(
+  words = c("go", "get", "make", "mom"),
+  output_file = out,
+  language = "eng",
+  corpus = "Brown",
+  age = c(24, 48),
+  include_patterns = c("g%"),   # keep only words starting with "g"
+  exclude_patterns = c("%ing")  # but drop "-ing" forms
+)
+```
+
+Patterns use `%` for “any number of characters” and `_` for “one character,” matching the FREQ/CLAN convention.
+
+## 6. Phrase Frequencies with `phrase_counts()`
+
+`phrase_counts()` is an **experimental** companion to `word_counts()`. It operates on utterance text rather than word types and is aimed at formulaic sequences, frames, and multiword expressions.
+
+**Basic Usage:**
+
+```r
+phr_out <- phrase_counts(
+  phrases = c("i don't know", "let's go"),
+  language = "eng",
+  corpus = "Brown",
+  age = c(24, 36),
+  role = c("CHI", "MOT"),
+  wildcard = FALSE,
+  normalize = TRUE
+)
+
+phr_out
+```
+
+**Key Points:**
+
+- `phrases` are matched in the **utterance string**, not via MOR.
+- `wildcard = TRUE` enables `*` (any characters) and `?` (single character) in patterns
+- Normalization is per number of utterances (`per_utts`).
+- Output is a tibble if `output_file` is `NULL`. Otherwise an **Excel workbook** with counts, a dataset summary, and run metadata.
+
+Because phrase matching is string-based, users should inspect a sample of matches and refine their patterns to avoid obvious false positives.
+
+
+## 7. Behavior When Items Are Missing from CHILDES
+
+If a word or pattern in the input list is **appears zero times** in the selected slice of CHILDES, `word_counts()` returns **zero counts** for that row.
+
+This is true both in type and token modes:
+
+- The row remains in `Word_Frequencies`.
+- All speaker-role columns and the `Total` column are `0`.
+- Normalization and Zipf columns (if requested) are computed on the resulting zeros.
+
+This behavior is deliberate:
+
+- Zero counts represent a genuine “**not observed in this slice**” result.
+- It allows users to distinguish “**not queried**” (no row) from “**queried but absent**” (row present, all zeros).
+
+When reporting results, it is good practice to state explicitly that non-attested words are retained with 0 counts.
+
+
+## 8. Expected Processing Times
+
+Runtime depends on:
+
+- Number of target items
+- Number and size of selected corpora
+- Whether **token mode** is used
+- Network latency and TalkBank load
+- Whether **disk caching** is enabled
+
+The following are approximate ranges from typical runs on a modern laptop with a stable connection:
+
+- **Small type-mode query**  
+  Fewer than 10 words, single English corpus, moderate age range  
+  → *seconds (often < 15 s)*.
+
+- **Medium type-mode query**  
+  50–100 words, several corpora, broad age range  
+  → *tens of seconds to a couple of minutes*.
+
+- **Token-mode query with wildcards/POS**  
+  Many patterns, `collapse = "stem"`, `part_of_speech` set, `tier = "mor"`  
+  → *expect 2–5× the corresponding type-mode runtime*.
+
+- **Wide, multi-corpus token-mode queries**  
+  Large word lists or “all-words” mode over many corpora and ages  
+  → *can take several minutes, especially without caching*.
+
+### 8.1 Practical Recommendations:
+
+- Prototype queries with a very small word list before scaling up
+- Restrict `language`, `corpus`, `age`, and `role` as tightly as your research question allows
+- Enable caching for interactive exploration.
+
+### 8.2 Caching 
+
+`childeswordfreq` includes optional disk caching to accelerate repeated queries during interactive work. Caching stores the results of remote CHILDES queries so that subsequent calls with the same arguments return immediately rather than re-downloading data.
+
+**What counts as “the same query”?**
+Caching speeds up calls that hit the same CHILDES slice, meaning all of the following match exactly:
+
+- `language`, `corpus`, `collection`
+- `age`, `sex`, `role`, `role_exclude`
+- Mode (type vs token) and token-mode settings (`wildcard`, `collapse`, `part_of_speech`, `tier`)
+
+If any of these change, a new remote query is required and caching does not apply.
+
+**When this is useful**: During development, analyses are regularly re-run when:
+
+- Re‐running the same code chunks while debugging
+- Knitting R Markdown files
+- Restarting an R session and re-executing the script
+- Testing changes to downstream processing
+- Running examples or unit tests that call the same slice repeatedly
+
+In practice, you may run the same CHILDES query dozens of times. Without caching, each run contacts the API and can take seconds to minutes. With caching, repeated runs are effectively instantaneous.
+
+Typical speedup
+- First run: full CHILDES download (seconds to minutes)
+- Subsequent identical runs: near 0 seconds
+
+This is a substantial benefit for workflows that involve frequent re-execution.
+
+**Usage**
+
+```r
+cwf_cache_enable()   # turn caching on for interactive exploration
+# ...run exploratory word_counts() or phrase_counts() calls...
+cwf_cache_disable()  # disable before final or published analyses
+```
+
+Final analyses should always be derived directly from the current CHILDES database, not from previously cached local data. Disabling caching ensures that the published output reflects up-to-date datasets.
+
+## 9. Reporting and Reproducibility
+
+Every `word_counts()` and `phrase_counts()` run writes:
+
+- **Dataset_Summary**: corpus, speaker, age, and token/utterance totals, plus normalization metadata
+- **Run_Metadata**: CHILDES DB version, package versions, timestamp, and cache status
+
+### To make analyses replicable:
+
+- Archive the entire Excel workbook alongside analysis scripts
+- Report at least:
+  - Language, corpus (and/or collection)
+  - Age range in months
+  - Speaker roles included/excluded
+  - Whether token mode was used (for example wildcards, stems, POS, MOR tier)
+  - Whether counts are raw, normalized, or Zipf-scaled
+  - Behavior for non-attested items (rows with 0 counts)
+
+### Template for Methods Section:
+
+```
+Lexical/phrasal frequencies were computed using the childeswordfreq R package (version X.Y.Z) through childesr (version A.B.C), querying the CHILDES database (version V). We analyzed language(s) L and corpus/corpora C, with an age range of [Amin, Amax] months. Target speaker roles included R, with excluded roles R_excl. Counts were obtained in [type/token] mode. [If token mode used:] We specified: [wildcards, stem collapsing, POS filters, MOR tier]. We applied normalization [per N tokens/Zipf scaling]. 
+```
+
+Adjust the placeholders to match the values recorded in your own outputs.
+

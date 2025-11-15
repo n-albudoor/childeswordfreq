@@ -1,14 +1,10 @@
----
-title: "childeswordfreq"
-author: "Nahar Albudoor"
-output: github_document
-editor_options:
-  markdown:
-    wrap: 72
----
+childeswordfreq
+================
+Nahar Albudoor
 
 `childeswordfreq` is an R package for extracting word and phrase
-frequencies from the CHILDES database using the `childesr` API. It enables users to:
+frequencies from the CHILDES database using the `childesr` API. It
+enables users to:
 
 - Get word counts by speaker role with `word_counts()`.
 - Count surface phrases in utterance text with `phrase_counts()`.
@@ -23,20 +19,19 @@ The primary functions are:
 - `phrase_counts()` for surface phrase counts in utterance text, with
   optional wildcard patterns and per-utterance normalization.
 
-
-
----
+------------------------------------------------------------------------
 
 # Requirements
 
-`childeswordfreq` does not require CLAN or local copies of CHILDES corpora. All
-queries go through `childesr`. Optional on-disk caching can be enabled to speed up repeated CHILDES queries.
+`childeswordfreq` does not require CLAN or local copies of CHILDES
+corpora. All queries go through `childesr`. Optional on-disk caching can
+be enabled to speed up repeated CHILDES queries.
 
----
+------------------------------------------------------------------------
 
 # Installation
 
-```r
+``` r
 # CRAN
 install.packages("childeswordfreq")
 
@@ -46,30 +41,28 @@ remotes::install_github("n-albudoor/childeswordfreq")
 
 Then load the package:
 
-```r
+``` r
 library(childeswordfreq)
 ```
 
 The package depends on `childesr` and its requirements. An active
-internet connection is required as all queries are executed
-through the TalkBank API.
+internet connection is required as all queries are executed through the
+TalkBank API.
 
----
+------------------------------------------------------------------------
 
 # Usage & Best Practices
 
 For more detailed guidance on using the package, see the vignette:
 
-```r
+``` r
 browseVignettes("childeswordfreq-best-practices")
 ```
 
----
+------------------------------------------------------------------------
 
 # License
 
 MIT.
 
----
-
-
+------------------------------------------------------------------------
